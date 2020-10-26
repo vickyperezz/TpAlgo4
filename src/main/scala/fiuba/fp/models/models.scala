@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 case class DataSetRow(
                      id: Int,
-                     date: LocalDateTime,
+                     date: String,
                      open: Option[Double],
                      high: Option[Double],
                      low: Option[Double],

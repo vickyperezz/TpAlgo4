@@ -11,17 +11,15 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 object Run extends App {
-
-    val program = IO { println(s"Hello!") }
-    
-    program.unsafeRunSync()
+  
+  val blockingExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(2))
 
   val parseDataSetRow: List[String] => Option[DataSetRow] = {
-    case (id :: date :: open :: high :: low :: last :: close :: diff :: curr :: ovol :: odf :: opv :: unit :: bn :: itau :: wdiff ) =>
+    case (id :: date :: open :: high :: low :: last :: close :: diff :: curr :: ovol :: odf :: opv :: unit :: bn :: itau :: wdiff :: nil ) =>
       Try(
         DataSetRow(
           id = id.trim.toInt,
-          date = date.toDate,
+          date = date,
           open = open.toDoubleOption,
           high = high.toDoubleOption,
           low = low.toDoubleOption,
@@ -59,7 +57,7 @@ object Run extends App {
 
     val program: IO[Unit] =
       parser.compile.drain.guarantee(IO(blockingExecutionContext.shutdown()))
-
-
-
+    
+    
+      program.unsafeRunSync()
 }
