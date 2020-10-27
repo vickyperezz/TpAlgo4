@@ -9,10 +9,9 @@ import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+object Converter extends IOApp {
 
-object Run extends App {
-  
-  val blockingExecutionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(2))
+
 
   val parseDataSetRow: List[String] => Option[DataSetRow] = {
     case (id :: date :: open :: high :: low :: last :: close :: diff :: curr :: ovol :: odf :: opv :: unit :: bn :: itau :: wdiff :: nil ) =>
@@ -40,24 +39,23 @@ object Run extends App {
   }
 
 
+
+  val converter: Stream[IO, Unit] = Stream.resource(Blocker[IO]).flatMap { blocker =>
+
+
+    io.file.readAll[IO](Paths.get("./train.csv"), blocker, 4096)
+      .through(csvParser)
+      .filter()
+      .map(parseDataSetRow) // parse each line into a valid sample
+      .unNoneTerminate // terminate when done
+      .evalMap(x => IO(println(x)))
+  }
+
   def csvParser[F[_]]: Pipe[F, Byte, List[String]] =
-      _.through(text.utf8Decode)
+    _.through(text.utf8Decode)
       .through(text.lines)
       .drop(1) // remove headers
-      .map(_.split(',').toList) // separate by comma
-
-    // Get file from https://support.spatialkey.com/spatialkey-sample-csv-data/ and convert it to UTF-8
-    val parser: Stream[IO, Unit] =
-      io.file
-        .readAll[IO](Paths.get("../train.csv"), blockingExecutionContext, 4096)
-        .through(csvParser)
-        .map(parseDataSetRow) // parse each line into a valid sample
-        .unNoneTerminate // terminate when done
-        .evalMap(x => IO(println(x)))
-
-    val program: IO[Unit] =
-      parser.compile.drain.guarantee(IO(blockingExecutionContext.shutdown()))
-    
-    
-      program.unsafeRunSync()
+      .map(_.split(',').toList)
+  def run(args: List[String]): IO[ExitCode] =
+    converter.compile.drain.as(ExitCode.Success)
 }
