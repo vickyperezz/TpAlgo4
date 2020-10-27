@@ -11,10 +11,8 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 object Converter extends IOApp {
 
-
-
   val parseDataSetRow: List[String] => Option[DataSetRow] = {
-    case (id :: date :: open :: high :: low :: last :: close :: diff :: curr :: ovol :: odf :: opv :: unit :: bn :: itau :: wdiff :: nil ) =>
+    case (id :: date :: open :: high :: low :: last :: close :: diff :: curr :: ovol :: odf :: opv :: unit :: bn :: itau :: wdiff :: nil) =>
       Try(
         DataSetRow(
           id = id.trim.toInt,
@@ -38,18 +36,15 @@ object Converter extends IOApp {
     case _ => None
   }
 
-
-
-  val converter: Stream[IO, Unit] = Stream.resource(Blocker[IO]).flatMap { blocker =>
-
-
-    io.file.readAll[IO](Paths.get("./train.csv"), blocker, 4096)
-      .through(csvParser)
-      .filter()
-      .map(parseDataSetRow) // parse each line into a valid sample
-      .unNoneTerminate // terminate when done
-      .evalMap(x => IO(println(x)))
-  }
+  val converter: Stream[IO, Unit] =
+    Stream.resource(Blocker[IO]).flatMap { blocker =>
+      io.file
+        .readAll[IO](Paths.get("./train.csv"), blocker, 4096)
+        .through(csvParser)
+        .map(parseDataSetRow) // parse each line into a valid sample
+        .unNoneTerminate // terminate when done
+        .evalMap(x => IO(println(x)))
+    }
 
   def csvParser[F[_]]: Pipe[F, Byte, List[String]] =
     _.through(text.utf8Decode)
